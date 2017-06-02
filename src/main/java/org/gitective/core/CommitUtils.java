@@ -54,20 +54,22 @@ public abstract class CommitUtils {
 	 *
 	 * @param repository
 	 * @param revision
-	 * @return commit
+	 * @return commit or <code>null</code> if the commit revision is not in the
+	 *         repository.
 	 */
-	public static RevCommit getCommit(final Repository repository,
-			final String revision) {
+	public static RevCommit getCommit(final Repository repository, final String revision) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (revision == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Revision"));
 		if (revision.length() == 0)
-			throw new IllegalArgumentException(
-					Assert.formatNotEmpty("Revision"));
+			throw new IllegalArgumentException(Assert.formatNotEmpty("Revision"));
 
-		return parse(repository, resolve(repository, revision));
+		ObjectId commitId = resolve(repository, revision);
+		if (commitId == null) {
+			return null;
+		}
+		return parse(repository, commitId);
 	}
 
 	/**
@@ -77,14 +79,11 @@ public abstract class CommitUtils {
 	 * @param commitId
 	 * @return commit
 	 */
-	public static RevCommit getCommit(final Repository repository,
-			final ObjectId commitId) {
+	public static RevCommit getCommit(final Repository repository, final ObjectId commitId) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (commitId == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Commit id"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Commit id"));
 
 		return parse(repository, commitId);
 	}
@@ -116,11 +115,9 @@ public abstract class CommitUtils {
 	 * @param commits
 	 * @return base commit or null if none
 	 */
-	public static RevCommit getBase(final Repository repository,
-			final ObjectId... commits) {
+	public static RevCommit getBase(final Repository repository, final ObjectId... commits) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (commits == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Commits"));
 		if (commits.length == 0)
@@ -136,17 +133,13 @@ public abstract class CommitUtils {
 	 * @param revisions
 	 * @return base commit or null if none
 	 */
-	public static RevCommit getBase(final Repository repository,
-			final String... revisions) {
+	public static RevCommit getBase(final Repository repository, final String... revisions) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (revisions == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Revisions"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Revisions"));
 		if (revisions.length == 0)
-			throw new IllegalArgumentException(
-					Assert.formatNotEmpty("Revisions"));
+			throw new IllegalArgumentException(Assert.formatNotEmpty("Revisions"));
 
 		final int length = revisions.length;
 		final ObjectId[] commits = new ObjectId[length];
@@ -163,16 +156,13 @@ public abstract class CommitUtils {
 	 * @param refName
 	 * @return commit, may be null
 	 */
-	public static RevCommit getRef(final Repository repository,
-			final String refName) {
+	public static RevCommit getRef(final Repository repository, final String refName) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (refName == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Ref name"));
 		if (refName.length() == 0)
-			throw new IllegalArgumentException(
-					Assert.formatNotEmpty("Ref name"));
+			throw new IllegalArgumentException(Assert.formatNotEmpty("Ref name"));
 
 		Ref ref;
 		try {
@@ -192,8 +182,7 @@ public abstract class CommitUtils {
 	 */
 	public static RevCommit getRef(final Repository repository, final Ref ref) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (ref == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Ref"));
 
@@ -208,8 +197,7 @@ public abstract class CommitUtils {
 	 */
 	public static Collection<RevCommit> getTags(final Repository repository) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 
 		final Collection<RevCommit> commits = new HashSet<RevCommit>();
 		final RevWalk walk = new RevWalk(repository);
@@ -232,8 +220,7 @@ public abstract class CommitUtils {
 	 */
 	public static Collection<RevCommit> getBranches(final Repository repository) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 
 		final Collection<RevCommit> commits = new HashSet<RevCommit>();
 		final RevWalk walk = new RevWalk(repository);
@@ -249,8 +236,7 @@ public abstract class CommitUtils {
 		return commits;
 	}
 
-	private static void getRefCommits(final RevWalk walk,
-			final RefDatabase refDb, final String prefix,
+	private static void getRefCommits(final RevWalk walk, final RefDatabase refDb, final String prefix,
 			final Collection<RevCommit> commits) throws IOException {
 		for (Ref ref : refDb.getRefs(prefix).values()) {
 			final RevCommit commit = getRef(walk, ref);
@@ -259,8 +245,7 @@ public abstract class CommitUtils {
 		}
 	}
 
-	private static RevCommit lookupRef(final Repository repository,
-			final Ref ref) {
+	private static RevCommit lookupRef(final Repository repository, final Ref ref) {
 		final RevWalk walk = new RevWalk(repository);
 		try {
 			return getRef(walk, ref);
@@ -271,8 +256,7 @@ public abstract class CommitUtils {
 		}
 	}
 
-	private static RevCommit getRef(final RevWalk walk, final Ref ref)
-			throws IOException {
+	private static RevCommit getRef(final RevWalk walk, final Ref ref) throws IOException {
 		ObjectId id = ref.getPeeledObjectId();
 		if (id == null)
 			id = ref.getObjectId();
@@ -286,8 +270,7 @@ public abstract class CommitUtils {
 	 * @param revision
 	 * @return commit id
 	 */
-	protected static ObjectId resolve(final Repository repository,
-			final String revision) {
+	protected static ObjectId resolve(final Repository repository, final String revision) {
 		try {
 			return repository.resolve(revision);
 		} catch (IOException e) {
@@ -305,18 +288,15 @@ public abstract class CommitUtils {
 	 * @param revision
 	 * @return commit id
 	 */
-	protected static ObjectId strictResolve(final Repository repository,
-			final String revision) {
+	protected static ObjectId strictResolve(final Repository repository, final String revision) {
 		final ObjectId resolved = resolve(repository, revision);
 		if (resolved == null)
-			throw new GitException(MessageFormat.format(
-					"Revision ''{0}'' could not be resolved", revision),
+			throw new GitException(MessageFormat.format("Revision ''{0}'' could not be resolved", revision),
 					repository);
 		return resolved;
 	}
 
-	private static RevCommit walkToBase(final Repository repository,
-			final ObjectId... commits) {
+	private static RevCommit walkToBase(final Repository repository, final ObjectId... commits) {
 		final RevWalk walk = new RevWalk(repository);
 		walk.setRevFilter(MERGE_BASE);
 		try {
@@ -340,8 +320,7 @@ public abstract class CommitUtils {
 	 * @param commit
 	 * @return commit
 	 */
-	protected static RevCommit parse(final Repository repository,
-			final ObjectId commit) {
+	protected static RevCommit parse(final Repository repository, final ObjectId commit) {
 		final RevWalk walk = new RevWalk(repository);
 		walk.setRetainBody(true);
 		try {
@@ -361,8 +340,7 @@ public abstract class CommitUtils {
 	 * @param commit
 	 * @return commit
 	 */
-	protected static RevCommit parse(final Repository repository,
-			final ObjectReader reader, final ObjectId commit) {
+	protected static RevCommit parse(final Repository repository, final ObjectReader reader, final ObjectId commit) {
 		final RevWalk walk = new RevWalk(reader);
 		walk.setRetainBody(true);
 		try {
@@ -380,8 +358,7 @@ public abstract class CommitUtils {
 	 * @param path
 	 * @return commit
 	 */
-	public static RevCommit getLastCommit(final Repository repository,
-			final String path) {
+	public static RevCommit getLastCommit(final Repository repository, final String path) {
 		return getLastCommit(repository, HEAD, path);
 	}
 
@@ -394,16 +371,13 @@ public abstract class CommitUtils {
 	 * @param path
 	 * @return commit
 	 */
-	public static RevCommit getLastCommit(final Repository repository,
-			final String revision, final String path) {
+	public static RevCommit getLastCommit(final Repository repository, final String revision, final String path) {
 		if (repository == null)
-			throw new IllegalArgumentException(
-					Assert.formatNotNull("Repository"));
+			throw new IllegalArgumentException(Assert.formatNotNull("Repository"));
 		if (revision == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Revision"));
 		if (revision.length() == 0)
-			throw new IllegalArgumentException(
-					Assert.formatNotEmpty("Revision"));
+			throw new IllegalArgumentException(Assert.formatNotEmpty("Revision"));
 		if (path == null)
 			throw new IllegalArgumentException(Assert.formatNotNull("Path"));
 		if (path.length() == 0)
@@ -412,8 +386,7 @@ public abstract class CommitUtils {
 		final RevWalk walk = new RevWalk(repository);
 		walk.setRetainBody(true);
 		try {
-			walk.markStart(walk
-					.parseCommit(strictResolve(repository, revision)));
+			walk.markStart(walk.parseCommit(strictResolve(repository, revision)));
 			walk.setTreeFilter(PathFilterUtils.and(path));
 			return walk.next();
 		} catch (IOException e) {
